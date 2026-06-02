@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Conagro · Calendario operativo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales/es.global.min.js"></script>
+<style>
+  :root {
+    /* ===== Marca Conagro — cambia solo estos dos valores ===== */
+    --conagro-green: #1F7A43;
+    --conagro-green-dark: #155C32;
+    /* ========================================================= */
+    --ink: #18211c;
+    --muted: #5c6b63;
+    --line: #e4e9e5;
+    --bg: #f6f8f6;
+    --card: #ffffff;
+
+    --cat-reuniones: var(--conagro-green);
+    --cat-requisiciones: #C4761A;
+    --cat-asuetos: #9C3B36;
+    --cat-cumpleanos: #BC5A82;
+    --cat-cedis-taller: #2C6E8F;
+    --cat-cedis-flete: #6A4FA0;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Hanken Grotesk", sans-serif; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 20px 40px; }
+
+  header.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .logo-img { height: 42px; width: auto; display: block; }
+  .brand .mark {
+    width: 40px; height: 40px; border-radius: 10px; background: var(--conagro-green);
+    display: flex; align-items: center; justify-content: center; color: #fff;
+    font-family: "Bricolage Grotesque", sans-serif; font-weight: 700; font-size: 21px; line-height: 1;
+  }
+  .brand h1 { font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .brand p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+
+  .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .btn { text-decoration: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; transition: background .15s ease, color .15s ease; white-space: nowrap; }
+  .btn-permiso { background: var(--conagro-green); color: #fff; }
+  .btn-permiso:hover { background: var(--conagro-green-dark); }
+  .btn-ghost { background: transparent; color: var(--conagro-green-dark); border: 1px solid var(--conagro-green); }
+  .btn-ghost:hover { background: rgba(31,122,67,.08); }
+
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); cursor: pointer; font-size: 13px;
+    font-weight: 500; color: var(--ink); user-select: none; transition: opacity .15s ease;
+  }
+  .chip .dot { width: 10px; height: 10px; border-radius: 3px; }
+  .chip[aria-pressed="false"] { opacity: .4; }
+  .chip.reserved { cursor: default; border-style: dashed; color: var(--muted); background: transparent; }
+  .chip.reserved .tag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); padding: 1px 7px; border-radius: 999px; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: 0 1px 2px rgba(20,40,30,.03); }
+
+  #calendar {
+    --fc-border-color: var(--line); --fc-page-bg-color: transparent;
+    --fc-today-bg-color: rgba(31,122,67,.07);
+    --fc-button-bg-color: var(--conagro-green); --fc-button-border-color: var(--conagro-green);
+    --fc-button-hover-bg-color: var(--conagro-green-dark); --fc-button-hover-border-color: var(--conagro-green-dark);
+    --fc-button-active-bg-color: var(--conagro-green-dark); --fc-button-active-border-color: var(--conagro-green-dark);
+    --fc-neutral-bg-color: var(--bg);
+  }
+  .fc .fc-toolbar-title { font-family: "Bricolage Grotesque", sans-serif; font-weight: 600; font-size: 1.25rem; letter-spacing: -0.01em; }
+  .fc .fc-button { font-weight: 600; text-transform: capitalize; box-shadow: none !important; }
+  .fc .fc-button-primary:focus { box-shadow: none !important; }
+  .fc-event { cursor: pointer; font-weight: 500; }
+  .fc-daygrid-event { padding: 1px 4px; }
+
+  #detail { margin-top: 18px; display: none; }
+  #detail .d-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  #detail .d-dot { width: 12px; height: 12px; border-radius: 4px; }
+  #detail .d-cat { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  #detail h3 { font-family: "Bricolage Grotesque", sans-serif; margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+  #detail .d-when { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  #detail .d-body { font-size: 14px; line-height: 1.55; margin: 0 0 14px; }
+  #detail .d-link { display: inline-block; text-decoration: none; color: #fff; background: var(--conagro-green); padding: 9px 16px; border-radius: 9px; font-weight: 600; font-size: 14px; }
+  #detail .d-link:hover { background: var(--conagro-green-dark); }
+  #detail .d-close { margin-left: 10px; background: transparent; border: 1px solid var(--line); border-radius: 9px; padding: 9px 14px; cursor: pointer; font: inherit; font-weight: 600; font-size: 14px; color: var(--muted); }
+
+  footer.brands { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .brands-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; display: block; margin-bottom: 12px; }
+  .brands-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .brand-logo { height: 34px; width: auto; opacity: .85; }
+  .note { margin-top: 14px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/conagro-logo.png" alt="Conagro" class="logo-img"
+           onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex';" />
+      <div class="mark" id="logoFallback" style="display:none">C</div>
+      <div>
+        <h1>Calendario operativo</h1>
+        <p>Conagro · reuniones, requisiciones, asuetos y cumpleaños</p>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn btn-ghost" id="reqBtn" href="#" target="_blank" rel="noopener">Formulario requisición</a>
+      <a class="btn btn-permiso" id="permisoBtn" href="#" target="_blank" rel="noopener">Solicitar permiso</a>
+    </div>
+  </header>
+
+  <div class="filters" id="filters"></div>
+
+  <div class="card"><div id="calendar"></div></div>
+
+  <div class="card" id="detail">
+    <div class="d-head">
+      <span class="d-dot" id="dDot"></span>
+      <span class="d-cat" id="dCat"></span>
+    </div>
+    <h3 id="dTitle"></h3>
+    <p class="d-when" id="dWhen"></p>
+    <div class="d-body" id="dBody" style="display:none"></div>
+    <a class="d-link" id="dLink" href="#" target="_blank" rel="noopener" style="display:none">Abrir formulario</a>
+    <button class="d-close" id="dClose">Cerrar</button>
+  </div>
+
+  <footer class="brands">
+    <span class="brands-label">Marcas que distribuimos</span>
+    <div class="brands-row">
+      <img src="assets/marcas/marca-1.png" alt="" class="brand-logo" onerror="this.remove()" />
+      <img src="assets/marcas/marca-2.png" alt="" class="brand-logo" onerror="this.remove()" />
+      <img src="assets/marcas/marca-3.png" alt="" class="brand-logo" onerror="this.remove()" />
+      <img src="assets/marcas/marca-4.png" alt="" class="brand-logo" onerror="this.remove()" />
+    </div>
+  </footer>
+
+  <p class="note" id="dataNote"></p>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN
+   ===================================================================== */
+const FORMS = {
+  permiso: "https://forms.gle/REEMPLAZA_PERMISO",
+  requisicion: "https://forms.gle/3XEdPiGeYbHC1CVQA"
+};
+
+const CATEGORIES = {
+  reuniones:     { label: "Reuniones sucursales",        color: "var(--cat-reuniones)",     on: true },
+  requisiciones: { label: "Requisiciones a proveedores", color: "var(--cat-requisiciones)", on: true },
+  asuetos:       { label: "Días asueto",                 color: "var(--cat-asuetos)",       on: true },
+  cumpleanos:    { label: "Cumpleaños",                  color: "var(--cat-cumpleanos)",    on: true }
+  /* ===== TRAMO RESERVADO PARA CEDIS =====
+  ,cedis_taller: { label: "CEDIS · taller (malla/corte)", color: "var(--cat-cedis-taller)", on: true }
+  ,cedis_flete:  { label: "CEDIS · fletes",               color: "var(--cat-cedis-flete)",  on: true }
+  ======================================= */
+};
+
+/* ---- Ciclo de requisición (se repite cada mes) ---- */
+const CYCLE_START = { year: 2026, month: 6 };  /* Junio 2026 = ciclo base */
+const CYCLE_MONTHS = 12;                        /* cuántos meses generar */
+const ROTATION = {
+  alta:  { label: "Alta rotación · mensual",    everyMonths: 1, proveedores: ["QUÍMICA SAGAL","TRIDENTE","PNM","PLASBOL"] },
+  media: { label: "Rotación media · bimestral", everyMonths: 2, proveedores: ["SQM / ICL","IRRITEC","NEVADA","ALBAUGH","MALLAS","GREEN HOW (ácidos)","Mochilas aspersoras (Hyundai, Jacto, Marvel)","MS AGROS","EPA"] },
+  baja:  { label: "Baja rotación · trimestral", everyMonths: 3, proveedores: ["PTI","UPL","SUMMIT","ALAFLEX (anilladas)","Aislantes y empaques (charolas de unicel)","BONASA","RAFIA (trenzados e Ing. Hernán)"] }
+};
+
+/* ---- Cumpleaños (captura una vez, se generan cada año) ---- */
+const BIRTHDAYS = [
+  { name: "Ezequiel Alejandro Meza Santos",      month: 2,  day: 20 },
+  { name: "Osiel Lopez Velasco",                 month: 3,  day: 4 },
+  { name: "Rogelio Aguilar Morales",             month: 4,  day: 28 },
+  { name: "Jerry Ortiz Diaz",                    month: 4,  day: 29 },
+  { name: "Noe Ladislao Altuzar Ochoa",          month: 5,  day: 7 },
+  { name: "Norma Ixzel Solis Gumeta",            month: 5,  day: 9 },
+  { name: "Rudi Antonio Cruz Castañon",          month: 6,  day: 12 },
+  { name: "Gloria Antonieta Garcia Hernandez",   month: 6,  day: 13 },
+  { name: "Jose Manuel Lopez Contreras",         month: 7,  day: 7 },
+  { name: "Jorge Franscico Moreno",              month: 7,  day: 15 },
+  { name: "Bernardino de Jesus Gonzalez",        month: 7,  day: 20 },
+  { name: "Royel Altunar Pablo",                 month: 7,  day: 30 },
+  { name: "Pedrito Espinosa Maldonado",          month: 8,  day: 1 },
+  { name: "Carlos Alberto Lopez Calvo",          month: 8,  day: 24 },
+  { name: "Willio Ignacio Guillen Perez",        month: 8,  day: 31 },
+  { name: "Rene Perez Gutierrez",                month: 9,  day: 13 },
+  { name: "Carlos Jhonatan Velasco Lopez",       month: 9,  day: 19 },
+  { name: "Alis David Antonio Vazquez",          month: 10, day: 5 },
+  { name: "America Zenaida Angel Bartolon",      month: 10, day: 12 },
+  { name: "David Alfredo Camacho Montesino",     month: 10, day: 16 },
+  { name: "Jorge Heriberto Lopez Hernandez",     month: 10, day: 26 },
+  { name: "Romeo Rueda Hernandez",               month: 11, day: 20 },
+  { name: "Iván de Jesús Alvarado Flores",       month: 11, day: 24 },
+  { name: "Noe Aaron Altuzar Cancino",           month: 11, day: 29 },
+  { name: "Miguel Angel Morales Gutierrez",      month: 12, day: 8 },
+  { name: "Manuel de Jesus Belazco Pinto",       month: 12, day: 11 },
+  { name: "Adriana Paulina Angel Vazquez",       month: 12, day: 18 },
+  { name: "Agustin de Jesus Guillen Perez",      month: 12, day: 30 }
+];
+
+const LINK_LABEL = { requisiciones: "Llenar requisición", asuetos: "Solicitar permiso", reuniones: "Unirse a la reunión (Zoom)" };
+
+/* ---- Días asueto. cierra:true = operaciones cerradas;
+   cierra:false = no se cierran operaciones, el día libre se rota. ---- */
+const ASUETOS = [
+  { date: "2026-09-16", nombre: "Independencia de México", cierra: false },
+  { date: "2026-11-16", nombre: "Día de la Revolución",    cierra: false },
+  { date: "2026-12-25", nombre: "Navidad",                 cierra: true }
+];
+
+/* ---- Reuniones quincenales por sucursal ----
+   Rotación de 2 semanas. La semana del MEETINGS_START_MONDAY es la "A".
+   Cada arreglo es lunes→viernes (índice 0 = lunes). */
+const MEETINGS_START_MONDAY = "2026-06-01";  /* lunes base, semana tipo A */
+const MEETING_WEEKS = 52;                     /* cuántas semanas generar (~1 año) */
+const MEETING_TIME = { start: "16:00:00", end: "17:00:00" };
+const MEETING_ROTATION = [
+  [ /* Semana A */
+    { titulo: "Triunfo",            url: "https://us06web.zoom.us/j/89337266098?pwd=iMonLtRAqud5gZvUpkD8wTPC6Cx6LD.1" },
+    { titulo: "Tapachula",          url: "https://us06web.zoom.us/j/88004767843?pwd=7KnbrmesGQLpQHemTkL2bOff50Wlek.1" },
+    { titulo: "Cintalapa",          url: "https://us06web.zoom.us/j/81934540978?pwd=AspaMCyVaPkkQZAVYn0fDsVdEFqnrJ.1" },
+    { titulo: "Ruta Comitán",       url: "https://us06web.zoom.us/j/85201981507?pwd=UJcBj69QDPIPsoiEP27cx8oRsiqmWY.1" },
+    { titulo: "Central de Abastos", url: "https://us06web.zoom.us/j/87328267181?pwd=snalxa0yZFX1UJpTvymdzEAlaLQeJT.1" }
+  ],
+  [ /* Semana B */
+    { titulo: "Tuxtla",      url: "https://us06web.zoom.us/j/85425063598?pwd=1nmsvIdWaItwZec4pexY8dfxETW24H.1" },
+    { titulo: "Ruta Tuxtla", url: "https://us06web.zoom.us/j/85076379796?pwd=aMNTdTzA3pQL4ifi1lqNmTgoE4M3MN.1" },
+    { titulo: "Villaflores", url: "https://us06web.zoom.us/j/81767918045?pwd=CeVLZMDUcY2Y3bGE3VoXpxzbVbmlIr.1" },
+    { titulo: "Matriz",      url: "https://us06web.zoom.us/j/83859524869?pwd=iphUmGLhsQA1JDYDnS720DvgwSG2fJ.1" },
+    { titulo: "Mérida",      url: "https://us06web.zoom.us/j/85026071233?pwd=hGkfrQbf27P2Ht5fvsDMCc9xMTBYFZ.1" }
+  ]
+];
+
+/* Eventos puntuales/ad-hoc. Los recurrentes (reuniones, ciclo, cumpleaños, asuetos)
+   se generan abajo. En GitHub Pages se leen primero de events.json. */
+const SAMPLE_EVENTS = [];
+
+/* =====================================================================
+   LÓGICA
+   ===================================================================== */
+let calendar;
+let ALL = [];
+const active = new Set(Object.keys(CATEGORIES).filter(k => CATEGORIES[k].on));
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function dateStr(y, m, d) { return y + "-" + pad(m) + "-" + pad(d); }
+
+function catColor(key) {
+  const v = (CATEGORIES[key] && CATEGORIES[key].color) || "var(--muted)";
+  const probe = document.createElement("span");
+  probe.style.color = v; document.body.appendChild(probe);
+  const rgb = getComputedStyle(probe).color; probe.remove();
+  return rgb;
+}
+
+function toFcEvent(e) {
+  const color = e.color || catColor(e.category);
+  const ev = {
+    id: e.id, title: e.title, start: e.start, end: e.end, allDay: e.allDay || false,
+    backgroundColor: color, borderColor: color,
+    extendedProps: { category: e.category, formUrl: e.formUrl || e.url || null, html: e.html || null, note: e.note || null, meta: e.meta || {} }
+  };
+  if (e.textColor) ev.textColor = e.textColor;
+  return ev;
+}
+
+function birthdayEvents() {
+  const years = [2026, 2027];
+  const out = [];
+  BIRTHDAYS.forEach((b, i) => years.forEach(y =>
+    out.push({ id: "bd" + i + "-" + y, title: "Cumpleaños · " + b.name, start: dateStr(y, b.month, b.day), allDay: true, category: "cumpleanos" })
+  ));
+  return out;
+}
+
+function meetingEvents() {
+  const out = [];
+  const base = new Date(MEETINGS_START_MONDAY + "T00:00:00");
+  for (let w = 0; w < MEETING_WEEKS; w++) {
+    const group = MEETING_ROTATION[w % 2];
+    group.forEach((mtg, col) => {
+      const d = new Date(base);
+      d.setDate(base.getDate() + w * 7 + col);
+      const day = dateStr(d.getFullYear(), d.getMonth() + 1, d.getDate());
+      out.push({
+        id: "mtg-" + w + "-" + col,
+        category: "reuniones",
+        title: mtg.titulo,
+        start: day + "T" + MEETING_TIME.start,
+        end: day + "T" + MEETING_TIME.end,
+        url: mtg.url
+      });
+    });
+  }
+  return out;
+}
+
+function asuetoEvents() {
+  return ASUETOS.map((a, i) => ({
+    id: "as-" + i,
+    category: "asuetos",
+    title: a.nombre + (a.cierra ? " · cerrado" : " · día rotativo"),
+    start: a.date,
+    allDay: true,
+    color: a.cierra ? "#9C3B36" : "#CD8A8A",
+    textColor: a.cierra ? "#ffffff" : "#4a1c1a",
+    note: a.cierra
+      ? "Operaciones cerradas este día."
+      : "No se cierran operaciones. El día libre se rota entre el personal."
+  }));
+}
+
+function monthsSince(y, m) { return (y - CYCLE_START.year) * 12 + (m - CYCLE_START.month); }
+function groupsDue(y, m) {
+  const ms = monthsSince(y, m);
+  return Object.keys(ROTATION).filter(k => ms >= 0 && ms % ROTATION[k].everyMonths === 0);
+}
+function lineasHtml(due, intro) {
+  if (!due.length) return "<p style='margin:0'>Sin líneas programadas este mes.</p>";
+  let h = "<p style='margin:0 0 10px'>" + intro + "</p>";
+  due.forEach(k => {
+    const g = ROTATION[k];
+    h += "<div style='margin:0 0 10px'><b>" + g.label + "</b><div style='color:var(--muted);font-size:13px;margin-top:3px'>" + g.proveedores.join(" · ") + "</div></div>";
+  });
+  return h;
+}
+function cycleEvents() {
+  const out = [];
+  for (let i = 0; i < CYCLE_MONTHS; i++) {
+    const t = new Date(CYCLE_START.year, CYCLE_START.month - 1 + i, 1);
+    const y = t.getFullYear(), m = t.getMonth() + 1;
+    const nx = (m === 12) ? { y: y + 1, m: 1 } : { y: y, m: m + 1 };
+    const D = d => dateStr(y, m, d);
+    const tag = "cy" + y + pad(m);
+    const due = groupsDue(y, m);
+    const summary = due.length ? due.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(" + ") : "—";
+
+    /* 1 · Revisión y preparación (1–10) — incluye qué líneas pedir este mes */
+    out.push({ id: tag + "-prep", category: "requisiciones", title: "1 · Revisión y preparación · " + summary, start: D(1), end: D(11), allDay: true, color: "#EAC08C", textColor: "#4a300f",
+      html: "<p style='margin:0 0 12px'>Sucursales: revisión de inventarios y preparación interna de requisiciones.</p>" + lineasHtml(due, "Líneas a solicitar este mes:") });
+
+    /* 2 · Fecha límite (11) */
+    out.push({ id: tag + "-lim", category: "requisiciones", title: "2 · Fecha límite — envío de requisiciones", start: D(11), allDay: true, color: "#A85617", textColor: "#ffffff", formUrl: FORMS.requisicion,
+      html: "<p style='margin:0 0 8px'>Las requisiciones enviadas <b>después del día 11</b> se programan para el siguiente ciclo, salvo que ya estén vendidas.</p><p style='margin:0'>Las requisiciones urgentes deben estar debidamente justificadas.</p>" });
+
+    /* 3 · Validación (12–14) */
+    out.push({ id: tag + "-val", category: "requisiciones", title: "3 · Validación y aclaraciones", start: D(12), end: D(15), allDay: true, color: "#DCA862", textColor: "#4a300f",
+      note: "Revisión y validación de requisiciones; solicitud de aclaraciones." });
+
+    /* 4 · Consolidación y órdenes de compra (15–17) */
+    out.push({ id: tag + "-con", category: "requisiciones", title: "4 · Consolidación y OC · " + summary, start: D(15), end: D(18), allDay: true, color: "#C98B3F", textColor: "#3d2708",
+      html: lineasHtml(due, "Proveedores a consolidar este mes:") });
+
+    /* 5 · Seguimiento y entregas (18–fin) */
+    out.push({ id: tag + "-seg", category: "requisiciones", title: "5 · Seguimiento y entregas", start: D(18), end: dateStr(nx.y, nx.m, 1), allDay: true, color: "#E8D2AC", textColor: "#5a3a12",
+      note: "Seguimiento con proveedores y confirmación de entregas. Recuerda anunciar la llegada y la distribución estimada. No siempre se compra todo lo solicitado por factores externos, pero la información de las sucursales siempre se toma en cuenta." });
+  }
+  return out;
+}
+
+function visibleEvents() { return ALL.filter(e => active.has(e.extendedProps.category)); }
+function refresh() { calendar.removeAllEvents(); calendar.addEventSource(visibleEvents()); }
+
+function buildFilters() {
+  const box = document.getElementById("filters");
+  Object.keys(CATEGORIES).forEach(key => {
+    const c = CATEGORIES[key];
+    const chip = document.createElement("button");
+    chip.className = "chip";
+    chip.setAttribute("aria-pressed", String(active.has(key)));
+    chip.innerHTML = "<span class='dot' style='background:" + c.color + "'></span>" + c.label;
+    chip.addEventListener("click", () => {
+      if (active.has(key)) active.delete(key); else active.add(key);
+      chip.setAttribute("aria-pressed", String(active.has(key)));
+      refresh();
+    });
+    box.appendChild(chip);
+  });
+  const reserved = document.createElement("span");
+  reserved.className = "chip reserved";
+  reserved.innerHTML = "<span class='dot' style='background:var(--cat-cedis-taller)'></span>Disponibilidad CEDIS <span class='tag'>próximamente</span>";
+  box.appendChild(reserved);
+}
+
+function showDetail(ev) {
+  const cat = ev.extendedProps.category;
+  document.getElementById("dDot").style.background = ev.backgroundColor || catColor(cat);
+  document.getElementById("dCat").textContent = (CATEGORIES[cat] && CATEGORIES[cat].label) || cat;
+  document.getElementById("dTitle").textContent = ev.title;
+  const opts = ev.allDay
+    ? { weekday: "long", day: "numeric", month: "long" }
+    : { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" };
+  document.getElementById("dWhen").textContent = ev.start ? ev.start.toLocaleString("es-MX", opts) : "";
+
+  const body = document.getElementById("dBody");
+  if (ev.extendedProps.html) { body.innerHTML = ev.extendedProps.html; body.style.display = "block"; }
+  else if (ev.extendedProps.note) { body.textContent = ev.extendedProps.note; body.style.display = "block"; }
+  else { body.style.display = "none"; }
+
+  const link = document.getElementById("dLink");
+  if (ev.extendedProps.formUrl) {
+    link.href = ev.extendedProps.formUrl;
+    link.textContent = LINK_LABEL[cat] || "Abrir formulario";
+    link.style.display = "inline-block";
+  } else { link.style.display = "none"; }
+
+  document.getElementById("detail").style.display = "block";
+}
+
+async function loadEvents() {
+  try {
+    const r = await fetch("events.json", { cache: "no-store" });
+    if (r.ok) {
+      const data = await r.json();
+      const arr = Array.isArray(data) ? data : (data.events || []);
+      document.getElementById("dataNote").textContent = "Datos desde events.json · " + arr.length + " eventos puntuales (+ ciclo de requisición y cumpleaños generados).";
+      return arr;
+    }
+  } catch (e) {}
+  document.getElementById("dataNote").textContent = "Mostrando datos de ejemplo (no se encontró events.json). El ciclo de requisición y los cumpleaños se generan solos.";
+  return SAMPLE_EVENTS;
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  document.getElementById("permisoBtn").href = FORMS.permiso;
+  document.getElementById("reqBtn").href = FORMS.requisicion;
+  document.getElementById("dClose").addEventListener("click", () => { document.getElementById("detail").style.display = "none"; });
+
+  buildFilters();
+
+  calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+    locale: "es",
+    initialView: "dayGridMonth",
+    initialDate: "2026-06-01",
+    height: "auto",
+    headerToolbar: { left: "prev,next today", center: "title", right: "multiMonthYear,dayGridMonth,timeGridWeek,timeGridDay" },
+    buttonText: { today: "Hoy", year: "Año", month: "Mes", week: "Semana", day: "Día" },
+    slotMinTime: "06:00:00",
+    slotMaxTime: "20:00:00",
+    dayMaxEvents: true,
+    nowIndicator: true,
+    eventClick: (info) => { info.jsEvent.preventDefault(); showDetail(info.event); }
+  });
+  calendar.render();
+
+  const raw = await loadEvents();
+  ALL = raw.map(toFcEvent)
+    .concat(birthdayEvents().map(toFcEvent))
+    .concat(cycleEvents().map(toFcEvent))
+    .concat(meetingEvents().map(toFcEvent))
+    .concat(asuetoEvents().map(toFcEvent));
+  refresh();
+});
+</script>
+</body>
+</html>
