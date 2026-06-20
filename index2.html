@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calendario de Reuniones</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f14; --surface:#161b25; --surface2:#1e2535; --border:#2a3348;
+    --accent:#2563eb; --accent-light:#3b82f6; --accent-glow:rgba(37,99,235,.18);
+    --zoom:#2d8cff; --text:#e8ecf4; --text-muted:#7a8599; --text-dim:#4a556a;
+    --bday:#f59e0b; --bday-glow:rgba(245,158,11,.15);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:32px 20px 60px}
+
+  .header{max-width:1100px;margin:0 auto 10px;display:flex;align-items:flex-end;gap:16px;border-bottom:1px solid var(--border);padding-bottom:20px}
+  .header-icon{width:44px;height:44px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+  .header-text h1{font-family:'Syne',sans-serif;font-size:22px;letter-spacing:-.5px}
+  .header-text p{font-size:13px;color:var(--text-muted);margin-top:2px}
+
+  .controls{max-width:1100px;margin:0 auto 28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .controls select{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 12px;border-radius:10px;cursor:pointer;max-width:320px}
+  .controls button{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:8px 14px;border-radius:10px;cursor:pointer;transition:.15s}
+  .controls button:hover{background:var(--accent-glow);border-color:rgba(59,130,246,.4);color:var(--accent-light)}
+  .controls .today-btn{color:var(--accent-light);border-color:rgba(59,130,246,.4)}
+
+  .week-block{max-width:1100px;margin:0 auto 48px;display:none}
+  .week-block.visible{display:block}
+  .week-label{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .badge{font-family:'Syne',sans-serif;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-glow);border:1px solid rgba(59,130,246,.25);padding:3px 10px;border-radius:20px}
+  .range{font-size:13px;color:var(--text-muted)}
+
+  .bday-banner{max-width:1100px;margin:0 0 14px;background:var(--bday-glow);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:9px 14px;font-size:12.5px;color:#fcd34d;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  .grid{display:grid;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--surface)}
+  .col-header{padding:12px 8px 10px;text-align:center;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .col-header.time-col{border-right:1px solid var(--border)}
+  .col-header .day-name{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted);font-weight:500}
+  .col-header .day-num{font-family:'Syne',sans-serif;font-size:20px;color:var(--text);margin-top:2px;line-height:1}
+  .col-header.today .day-num,.col-header.today .day-name{color:var(--accent-light)}
+
+  .time-col-body{position:relative;border-right:1px solid var(--border)}
+  .time-mark{position:absolute;right:8px;font-size:10.5px;color:var(--text-dim);transform:translateY(-50%)}
+
+  .day-col{position:relative;border-right:1px solid var(--border)}
+  .day-col:last-child{border-right:none}
+  .hline{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+
+  .meeting{position:absolute;border-radius:8px;padding:6px 8px;background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(37,99,235,.14));border:1px solid rgba(59,130,246,.4);cursor:pointer;transition:.18s;text-decoration:none;display:block;overflow:hidden;z-index:2}
+  .meeting:hover{background:linear-gradient(135deg,rgba(45,140,255,.42),rgba(37,99,235,.28));border-color:var(--zoom);box-shadow:0 4px 20px rgba(45,140,255,.25);z-index:5}
+  .meeting .m-title{font-size:10.5px;font-weight:600;color:#c7d9ff;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .meeting .m-time{font-size:9px;color:var(--text-muted);margin-top:2px}
+  .meeting .zoom-chip{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:8.5px;color:var(--zoom);background:rgba(45,140,255,.12);border:1px solid rgba(45,140,255,.25);border-radius:4px;padding:1px 5px;font-weight:500}
+
+  .legend{max-width:1100px;margin:0 auto;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .legend span.item{display:flex;align-items:center;gap:8px}
+  .legend-dot{width:8px;height:8px;background:var(--zoom);border-radius:50%}
+  .legend-dot.bday{background:var(--bday)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📅</div>
+  <div class="header-text">
+    <h1>Calendario de Reuniones</h1>
+    <p>Haz clic en cada reunión para abrir el enlace de Zoom · Horario: 7:00 – 19:00</p>
+  </div>
+</div>
+
+<div class="controls">
+  <button id="prevBtn">← Semana anterior</button>
+  <select id="weekSelect"></select>
+  <button id="nextBtn">Semana siguiente →</button>
+  <button id="todayBtn" class="today-btn">📍 Ir a hoy</button>
+</div>
+
+<div id="weeks-container"></div>
+
+<div class="legend">
+  <span class="item"><span class="legend-dot"></span> Reunión con enlace de Zoom activo</span>
+  <span class="item"><span class="legend-dot bday"></span> Cumpleaños del equipo</span>
+</div>
+
+<script>
+/* ============================================================
+   ✏️  EDITA AQUÍ — datos que cambian de vez en cuando
+   ============================================================ */
+
+// Rango de fechas que se genera automáticamente (ajusta END si quieres más allá)
+const START_DATE = new Date(2026, 5, 8);   // Lunes 8 de junio de 2026
+const END_DATE   = new Date(2027, 11, 31); // 31 de diciembre de 2027
+
+// ── Reuniones recurrentes ──
+// weekday: 1=Lunes 2=Martes 3=Miércoles 4=Jueves 5=Viernes
+// freq:    "weekly" = todas las semanas
+//          "A" o "B" = quincenal, alternando grupo de semana (ver más abajo)
+// start/end: hora en formato decimal (16 = 4:00pm, 7.75 = 7:45am)
+// startDate (opcional): fecha desde la que empieza a aplicar la reunión
+const REUNIONES = [
+  // — Quincenales grupo A (semana del 8 jun 2026 en adelante, cada 2 semanas) —
+  { titulo:"Reunión suc. Triunfo",        weekday:1, start:16,   end:17,   freq:"A", url:"https://us06web.zoom.us/j/89337266098?pwd=iMonLtRAqud5gZvUpkD8wTPC6Cx6LD.1" },
+  { titulo:"Reunión suc. Tapachula",      weekday:2, start:16,   end:17,   freq:"A", url:"https://us06web.zoom.us/j/88004767843?pwd=7KnbrmesGQLpQHemTkL2bOff50Wlek.1" },
+  { titulo:"Reunión suc. Cintalapa",      weekday:3, start:16,   end:17,   freq:"A", url:"https://us06web.zoom.us/j/81934540978?pwd=AspaMCyVaPkkQZAVYn0fDsVdEFqnrJ.1" },
+  { titulo:"Reunión Ruta Comitán",        weekday:4, start:16,   end:17,   freq:"A", url:"https://us06web.zoom.us/j/85201981507?pwd=UJcBj69QDPIPsoiEP27cx8oRsiqmWY.1" },
+  { titulo:"Reunión suc. Central Abastos",weekday:5, start:16,   end:17,   freq:"A", url:"https://us06web.zoom.us/j/87328267181?pwd=snalxa0yZFX1UJpTvymdzEAlaLQeJT.1" },
+
+  // — Quincenales grupo B (semana del 15 jun 2026 en adelante, cada 2 semanas) —
+  { titulo:"Reunión suc. Tuxtla",         weekday:1, start:16,   end:17,   freq:"B", url:"https://us06web.zoom.us/j/85425063598?pwd=1nmsvIdWaItwZec4pexY8dfxETW24H.1" },
+  { titulo:"Reunión Ruta Tuxtla",         weekday:2, start:16,   end:17,   freq:"B", url:"https://us06web.zoom.us/j/85076379796?pwd=aMNTdTzA3pQL4ifi1lqNmTgoE4M3MN.1" },
+  { titulo:"Reunión suc. Villaflores",    weekday:3, start:16,   end:17,   freq:"B", url:"https://us06web.zoom.us/j/81767918045?pwd=CeVLZMDUcY2Y3bGE3VoXpxzbVbmlIr.1" },
+  { titulo:"Reunión suc. Matriz",         weekday:4, start:16,   end:17,   freq:"B", url:"https://us06web.zoom.us/j/83859524869?pwd=iphUmGLhsQA1JDYDnS720DvgwSG2fJ.1" },
+  { titulo:"Reunión suc. Mérida",         weekday:5, start:16,   end:17,   freq:"B", url:"https://us06web.zoom.us/j/85026071233?pwd=hGkfrQbf27P2Ht5fvsDMCc9xMTBYFZ.1" },
+
+  // — Semanales —
+  { titulo:"Reunión motivación 💪🏽☕",     weekday:1, start:7.75, end:9.5,  freq:"weekly", url:"https://us06web.zoom.us/j/82746282693?pwd=dCbNelNM2Bfx75UQG7R6aKnGxa7PEa.1" },
+  { titulo:"Reunión Ruta Fertilizantes",  weekday:1, start:9,    end:10,   freq:"weekly", url:"https://us06web.zoom.us/j/83052660598?pwd=Ze51KJnVzuOO4sojvpAuoI8e6xIkEz.1" },
+  { titulo:"Avance pendientes Div. Comercial", weekday:1, start:10, end:11, freq:"weekly", url:"https://us06web.zoom.us/j/89694145631?pwd=I4YPgcJw9a0XinLqwLkQGgTW6bEMhW.1" },
+  { titulo:"Reunión con CEDIS Tuxtla",    weekday:5, start:15,   end:16,   freq:"weekly", url:"https://us06web.zoom.us/j/89271868301?pwd=WEbqbzZSu4kabMqFNJCSJDb0PMP6aP.1" },
+
+  // — Quincenal especial (empieza el 30 de junio de 2026) —
+  { titulo:"Reunión con CEDIS Comitán",   weekday:2, start:10,   end:11,   freq:"B", startDate:new Date(2026,5,30), url:"https://us06web.zoom.us/j/87562867585?pwd=2e089iQCCa6C666KYpaLlfHcg9a7XN.1" },
+
+  // ➕ Para agregar una reunión nueva, copia una línea de arriba y modifícala
+];
+
+// ── Cumpleaños del equipo (mes y día) ──
+const BIRTHDAYS = [
+  { name: "Ezequiel Alejandro Meza Santos",      month: 2,  day: 20 },
+  { name: "Osiel Lopez Velasco",                 month: 3,  day: 4  },
+  { name: "Ariosto Martinez Ochoa",              month: 3,  day: 14 },
+  { name: "Carlos Alfredo Marina Pereyda",       month: 4,  day: 19 },
+  { name: "Rogelio Aguilar Morales",             month: 4,  day: 28 },
+  { name: "Jerry Ortiz Diaz",                    month: 4,  day: 29 },
+  { name: "Noe Ladislao Altuzar Ochoa",          month: 5,  day: 7  },
+  { name: "Norma Ixzel Solis Gumeta",            month: 5,  day: 9  },
+  { name: "Rudi Antonio Cruz Castañon",          month: 6,  day: 12 },
+  { name: "Gloria Antonieta Garcia Hernandez",   month: 6,  day: 13 },
+  { name: "Jose Manuel Lopez Contreras",         month: 7,  day: 7  },
+  { name: "Jorge Franscico Moreno",              month: 7,  day: 15 },
+  { name: "Bernardino de Jesus Gonzalez",        month: 7,  day: 20 },
+  { name: "Royel Altunar Pablo",                 month: 7,  day: 30 },
+  { name: "Pedrito Espinosa Maldonado",          month: 8,  day: 1  },
+  { name: "Leonardo Lopez Calvo",                month: 8,  day: 18 },
+  { name: "Carlos Alberto Lopez Calvo",          month: 8,  day: 24 },
+  { name: "Willio Ignacio Guillen Perez",        month: 8,  day: 31 },
+  { name: "Rene Perez Gutierrez",                month: 9,  day: 13 },
+  { name: "Carlos Jhonatan Velasco Lopez",       month: 9,  day: 19 },
+  { name: "Alis David Antonio Vazquez",          month: 10, day: 5  },
+  { name: "America Zenaida Angel Bartolon",      month: 10, day: 12 },
+  { name: "David Alfredo Camacho Montesino",     month: 10, day: 16 },
+  { name: "Jorge Heriberto Lopez Hernandez",     month: 10, day: 26 },
+  { name: "Romeo Rueda Hernandez",               month: 11, day: 20 },
+  { name: "Iván de Jesús Alvarado Flores",       month: 11, day: 24 },
+  { name: "Noe Aaron Altuzar Cancino",           month: 11, day: 29 },
+  { name: "Miguel Angel Morales Gutierrez",      month: 12, day: 8  },
+  { name: "Manuel de Jesus Belazco Pinto",       month: 12, day: 11 },
+  { name: "Adriana Paulina Angel Vazquez",       month: 12, day: 18 },
+  { name: "Agustin de Jesus Guillen Perez",      month: 12, day: 30 },
+  // ➕ Para agregar un cumpleaños nuevo, copia una línea de arriba y modifícala
+];
+
+/* ============================================================
+   🔽  No es necesario editar nada debajo de esta línea
+   ============================================================ */
+
+const HOURS_START = 7, HOURS_END = 19; // 7:00 a 19:00
+const PX_PER_HOUR = 56;
+const TOTAL_H = (HOURS_END - HOURS_START) * PX_PER_HOUR;
+
+const DIAS_CORTOS = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+
+function mondayOfWeek(d) {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate()+n); return r; }
+function weeksBetween(d1, d2) { return Math.round((d2-d1)/(7*24*3600*1000)); }
+function groupOfWeek(monday) {
+  const w = weeksBetween(START_DATE, monday);
+  return (((w % 2) + 2) % 2 === 0) ? 'A' : 'B';
+}
+function fmtHour(h) {
+  const hh = Math.floor(h);
+  const mm = Math.round((h - hh) * 60);
+  return mm === 0 ? `${hh}:00` : `${hh}:${String(mm).padStart(2,'0')}`;
+}
+function fmtRango(diasInfo) {
+  const first = diasInfo[0], last = diasInfo[4];
+  if (first.getMonth() === last.getMonth()) {
+    return `${first.getDate()} – ${last.getDate()} de ${MESES[first.getMonth()]} de ${first.getFullYear()}`;
+  } else if (first.getFullYear() === last.getFullYear()) {
+    return `${first.getDate()} de ${MESES[first.getMonth()]} – ${last.getDate()} de ${MESES[last.getMonth()]} de ${first.getFullYear()}`;
+  }
+  return `${first.getDate()} de ${MESES[first.getMonth()]} de ${first.getFullYear()} – ${last.getDate()} de ${MESES[last.getMonth()]} de ${last.getFullYear()}`;
+}
+
+function layoutDay(meetings) {
+  const sorted = [...meetings].sort((a,b)=>a.start-b.start);
+  const clusters = [];
+  let current = [], currentEnd = -Infinity;
+  sorted.forEach(m=>{
+    if (current.length===0 || m.start < currentEnd) {
+      current.push(m); currentEnd = Math.max(currentEnd, m.end);
+    } else {
+      clusters.push(current); current=[m]; currentEnd=m.end;
+    }
+  });
+  if (current.length) clusters.push(current);
+  clusters.forEach(cluster=>{
+    const laneEnds = [];
+    cluster.forEach(m=>{
+      let placed=false;
+      for (let i=0;i<laneEnds.length;i++){
+        if (laneEnds[i] <= m.start) { m.lane=i; laneEnds[i]=m.end; placed=true; break; }
+      }
+      if (!placed) { m.lane = laneEnds.length; laneEnds.push(m.end); }
+    });
+    const maxLanes = laneEnds.length;
+    cluster.forEach(m=>m.lanes=maxLanes);
+  });
+  return sorted;
+}
+
+function genWeeks() {
+  const weeks = [];
+  const todayMonday = mondayOfWeek(new Date());
+  let monday = mondayOfWeek(START_DATE);
+  let n = 1;
+  while (monday <= END_DATE) {
+    const diasInfo = [0,1,2,3,4].map(i=>addDays(monday,i));
+    const grp = groupOfWeek(monday);
+
+    // Reuniones de esta semana, por día
+    const porDia = [[],[],[],[],[]];
+    REUNIONES.forEach(m=>{
+      if (m.startDate && monday < mondayOfWeek(m.startDate)) return;
+      if (m.endDate && monday > mondayOfWeek(m.endDate)) return;
+      const applies = (m.freq === 'weekly') || (m.freq === grp);
+      if (!applies) return;
+      porDia[m.weekday-1].push({ titulo:m.titulo, start:m.start, end:m.end, url:m.url });
+    });
+    porDia.forEach((lista,i)=>{ porDia[i] = layoutDay(lista); });
+
+    // Cumpleaños de esta semana
+    const cumple = [];
+    diasInfo.forEach((d,i)=>{
+      BIRTHDAYS.forEach(b=>{
+        if (b.month === d.getMonth()+1 && b.day === d.getDate()) cumple.push({col:i, name:b.name});
+      });
+    });
+
+    let hoy = -1;
+    if (monday.getTime() === todayMonday.getTime()) {
+      const dow = new Date().getDay();
+      if (dow>=1 && dow<=5) hoy = dow-1;
+    }
+
+    weeks.push({
+      n, rango: fmtRango(diasInfo),
+      dias: diasInfo.map(d=>`${DIAS_CORTOS[d.getDay()]} ${d.getDate()}`),
+      hoy, porDia, cumple,
+      isCurrent: monday.getTime() === todayMonday.getTime(),
+      isFuture: monday.getTime() > todayMonday.getTime()
+    });
+    monday = addDays(monday,7);
+    n++;
+  }
+  return weeks;
+}
+
+function buildWeekDOM(week, idx) {
+  const block = document.createElement('div');
+  block.className = 'week-block';
+  block.id = 'week-' + idx;
+
+  let bdayHTML = '';
+  if (week.cumple.length) {
+    const names = week.cumple.map(c=>`🎂 ${c.name} (${week.dias[c.col]})`).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+    bdayHTML = `<div class="bday-banner">${names}</div>`;
+  }
+
+  block.innerHTML = `
+    <div class="week-label">
+      <span class="badge">Semana ${week.n}</span>
+      <span class="range">${week.rango}</span>
+    </div>
+    ${bdayHTML}
+    <div class="grid" style="grid-template-columns:52px repeat(5,1fr)" id="grid-${idx}"></div>
+  `;
+  document.getElementById('weeks-container').appendChild(block);
+
+  const grid = document.getElementById('grid-' + idx);
+
+  // Header row
+  const timeTh = document.createElement('div');
+  timeTh.className = 'col-header time-col';
+  grid.appendChild(timeTh);
+  week.dias.forEach((d,i)=>{
+    const [name,num] = d.split(' ');
+    const th = document.createElement('div');
+    th.className = 'col-header' + (i===week.hoy ? ' today' : '');
+    th.innerHTML = `<div class="day-name">${name}</div><div class="day-num">${num}</div>`;
+    grid.appendChild(th);
+  });
+
+  // Time column body
+  const timeBody = document.createElement('div');
+  timeBody.className = 'time-col-body';
+  timeBody.style.height = TOTAL_H + 'px';
+  for (let h=HOURS_START; h<=HOURS_END; h++){
+    const mark = document.createElement('div');
+    mark.className = 'time-mark';
+    mark.style.top = ((h-HOURS_START)*PX_PER_HOUR) + 'px';
+    mark.textContent = h + ':00';
+    timeBody.appendChild(mark);
+  }
+  grid.appendChild(timeBody);
+
+  // Day columns
+  week.porDia.forEach((lista,ci)=>{
+    const col = document.createElement('div');
+    col.className = 'day-col';
+    col.style.height = TOTAL_H + 'px';
+
+    for (let h=HOURS_START+1; h<HOURS_END; h++){
+      const line = document.createElement('div');
+      line.className = 'hline';
+      line.style.top = ((h-HOURS_START)*PX_PER_HOUR) + 'px';
+      col.appendChild(line);
+    }
+
+    lista.forEach(m=>{
+      const top = (m.start-HOURS_START)*PX_PER_HOUR + 3;
+      const height = (m.end-m.start)*PX_PER_HOUR - 6;
+      const widthPct = 100/m.lanes;
+      const card = document.createElement('a');
+      card.href = m.url; card.target='_blank'; card.rel='noopener';
+      card.className = 'meeting';
+      card.style.cssText = `top:${top}px;height:${Math.max(height,30)}px;left:calc(${m.lane*widthPct}% + 3px);width:calc(${widthPct}% - 6px)`;
+      card.innerHTML = `
+        <div class="m-title">${m.titulo}</div>
+        <div class="m-time">${fmtHour(m.start)} – ${fmtHour(m.end)}</div>
+        <div class="zoom-chip">▶ Zoom</div>
+      `;
+      col.appendChild(card);
+    });
+    grid.appendChild(col);
+  });
+}
+
+function buildSelect(weeks) {
+  const sel = document.getElementById('weekSelect');
+  weeks.forEach((w,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `Semana ${w.n} · ${w.rango}`;
+    sel.appendChild(opt);
+  });
+}
+
+let WEEKS = [];
+let activeIdx = 0;
+
+function showWeek(idx) {
+  if (idx < 0 || idx >= WEEKS.length) return;
+  document.querySelectorAll('.week-block').forEach(b=>b.classList.remove('visible'));
+  document.getElementById('week-' + idx).classList.add('visible');
+  document.getElementById('weekSelect').value = idx;
+  activeIdx = idx;
+}
+
+function init() {
+  WEEKS = genWeeks();
+  WEEKS.forEach((w,i)=>buildWeekDOM(w,i));
+  buildSelect(WEEKS);
+
+  let startIdx = WEEKS.findIndex(w=>w.isCurrent);
+  if (startIdx === -1) startIdx = WEEKS.findIndex(w=>w.isFuture);
+  if (startIdx === -1) startIdx = 0;
+  showWeek(startIdx);
+
+  document.getElementById('weekSelect').addEventListener('change', e=>showWeek(parseInt(e.target.value)));
+  document.getElementById('prevBtn').addEventListener('click', ()=>showWeek(activeIdx-1));
+  document.getElementById('nextBtn').addEventListener('click', ()=>showWeek(activeIdx+1));
+  document.getElementById('todayBtn').addEventListener('click', ()=>showWeek(startIdx));
+}
+
+init();
+</script>
+</body>
+</html>
